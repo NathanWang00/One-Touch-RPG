@@ -28,12 +28,16 @@ const G = {
 	HEIGHT: 70,
 
 	PLAYER_HEALTH: 100,
+	ENEMY_0_HEALTH: 200,
 
 	GUARD_HOLD_LENGTH: 0.3,
 	RESET_LENGTH: 0.15,
 
 	STAB_TAP_AMOUNT: 2,
 	STAB_DELAY: 0.1,
+
+	HEALTH_BAR_LENGTH: 6,
+	HEALTH_BAR_OFFSET: 5
 }
 
 options = {
@@ -56,6 +60,7 @@ const playerStates = {
  * @typedef {{
  * health: number
  * pos: Vector
+ * hBarIndex: number
  * }} Player
  */
 
@@ -69,6 +74,7 @@ let player;
  * health: number
  * type: number
  * order: number
+ * hBarIndex: number
  * }} Enemy
  */
 
@@ -76,6 +82,15 @@ let player;
  * @type { Enemy [] }
  */
 let enemy;
+
+/**
+ * @typedef {{
+ * maxHealth: number
+ * health: number
+ * pos: Vector
+ * }} HealthBar
+ */
+ let healthBar;
 
 /**
  * @type { string }
@@ -106,16 +121,31 @@ function update() {
 	if (!ticks) {
 		player = {
 			health: G.PLAYER_HEALTH,
-			pos: vec(G.WIDTH/2, G.HEIGHT*2/3)
+			pos: vec(G.WIDTH/2, G.HEIGHT*2/3),
+			hBarIndex: 0
 		};
+		healthBar = [];
+		healthBar.push({
+			maxHealth: G.PLAYER_HEALTH,
+			health: G.PLAYER_HEALTH,
+			pos: player.pos
+		});
 
 		enemy = [];
 
 		for (let index = 0; index < 3; index++) {
 			enemy.push({
-				health: 1,
+				health: G.ENEMY_0_HEALTH,
 				type: 0,
-				order: index
+				order: index,
+				hBarIndex: index + 1
+			});
+			const interval = G.WIDTH / 4;
+			const position = (index * interval) + interval;
+			healthBar.push({
+				maxHealth: G.ENEMY_0_HEALTH,
+				health: G.PLAYER_HEALTH,
+				pos: vec(position, G.HEIGHT/3)
 			});
 		}
 	}
@@ -183,5 +213,10 @@ function update() {
 		const position = (e.order * interval) + interval;
 		char("b", vec(position, G.HEIGHT/3));
 	});
-	
+
+	// health bars
+	healthBar.forEach(hb => {
+		color("green");
+		box(hb.pos.x, hb.pos.y+G.HEALTH_BAR_OFFSET, 6, 1);
+	});
 }
