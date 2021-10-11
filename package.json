@@ -1,0 +1,13 @@
+{
+  "name": "one-touch-rpg",
+  "version": "1.0.0",
+  "description": "A simple game made for CMPM/AGPM 170 by Nathan Wang and Jiaying Hou",
+  "scripts": {
+    "watch_games": "light-server -s docs -w \"docs/**/* # # reload\""
+  },
+  "author": "abagames",
+  "license": "MIT",
+  "devDependencies": {
+    "light-server": "^2.7.0"
+  }
+}
