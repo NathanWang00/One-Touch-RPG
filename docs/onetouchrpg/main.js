@@ -1,15 +1,33 @@
 title = "One Touch RPG";
 
 description = 
-`[Tap] Attack
+`
+[Tap] Attack
 [Hold] Guard
 `;
 
-characters = [];
+characters = [
+// Player (placeholder)
+`
+ l  l
+
+l    l
+ llll
+`,
+// Enemy 1 (placeholder)
+`
+ l  l
+
+ llll
+l    l
+`
+];
 
 const G = {
-	WIDTH: 100,
-	HEIGHT: 120,
+	WIDTH: 95,
+	HEIGHT: 70,
+
+	PLAYER_HEALTH: 100,
 
 	GUARD_HOLD_LENGTH: 0.3,
 	RESET_LENGTH: 0.15,
@@ -33,6 +51,31 @@ const playerStates = {
 	SLASHING: "slashing",
 	STABBING: "stabbing"
 }
+
+/**
+ * @typedef {{
+ * health: number
+ * pos: Vector
+ * }} Player
+ */
+
+/**
+ * @type { Player }
+ */
+let player;
+
+/**
+ * @typedef {{
+ * health: number
+ * type: number
+ * order: number
+ * }} Enemy
+ */
+
+/**
+ * @type { Enemy [] }
+ */
+let enemy;
 
 /**
  * @type { string }
@@ -61,7 +104,20 @@ let tapAmount = 0;
 
 function update() {
 	if (!ticks) {
+		player = {
+			health: G.PLAYER_HEALTH,
+			pos: vec(G.WIDTH/2, G.HEIGHT*2/3)
+		};
 
+		enemy = [];
+
+		for (let index = 0; index < 3; index++) {
+			enemy.push({
+				health: 1,
+				type: 0,
+				order: index
+			});
+		}
 	}
 	// input and state determination
 	if (input.isJustPressed) {
@@ -115,4 +171,17 @@ function update() {
 			}
 			break;
 	}
+
+	// player sprite
+	color("black");
+	char("a", player.pos);
+
+	// enemy sprites
+	enemy.forEach(e => {
+		color("black");
+		const interval = G.WIDTH / (enemy.length + 1);
+		const position = (e.order * interval) + interval;
+		char("b", vec(position, G.HEIGHT/3));
+	});
+	
 }
