@@ -35,9 +35,14 @@ const G = {
 
 	STAB_TAP_AMOUNT: 2,
 	STAB_DELAY: 0.1,
+	
+	STAB_DAMAGE: 10,
+	SLASH_DAMAGE: 25,
+
+	DAMAGE_VARIANCE: 0.05,
 
 	HEALTH_BAR_LENGTH: 6,
-	HEALTH_BAR_OFFSET: 5
+	HEALTH_BAR_OFFSET: 5,
 }
 
 options = {
@@ -117,6 +122,8 @@ let playerState = playerStates.DEFAULT;
  */
 let tapAmount = 0;
 
+let firstClick = false;
+
 function update() {
 	if (!ticks) {
 		player = {
@@ -144,43 +151,48 @@ function update() {
 			const position = (index * interval) + interval;
 			healthBar.push({
 				maxHealth: G.ENEMY_0_HEALTH,
-				health: G.PLAYER_HEALTH,
+				health: G.ENEMY_0_HEALTH,
 				pos: vec(position, G.HEIGHT/3)
 			});
 		}
 	}
-	// input and state determination
-	if (input.isJustPressed) {
-		releasedTime = 0;
-	}
-	if (input.isJustReleased) {
-		if (playerState == playerStates.GUARDING) {
-			playerState = playerStates.DEFAULT;
-		} else if (pressedTime < G.GUARD_HOLD_LENGTH) {
-			tapAmount++;
-			if (tapAmount >= G.STAB_TAP_AMOUNT) {
-				playerState = playerStates.STABBING;
-			}
+	if (firstClick) {
+		// input and state determination
+		if (input.isJustPressed) {
+			releasedTime = 0;
 		}
-		pressedTime = 0;
-	}
-	if (input.isPressed) {
-		pressedTime += 1/60; // all inputs are measured in seconds
-		if (pressedTime >= G.GUARD_HOLD_LENGTH) {
-			playerState = playerStates.GUARDING;
-			tapAmount = 0;
-		}
-	} else {
-		releasedTime += 1/60;
-		if (releasedTime >= G.RESET_LENGTH) {
-			if (tapAmount >= G.STAB_TAP_AMOUNT) {
+		if (input.isJustReleased) {
+			if (playerState == playerStates.GUARDING) {
 				playerState = playerStates.DEFAULT;
-			} else if (tapAmount > 0) {
-				playerState = playerStates.SLASHING;
+			} else if (pressedTime < G.GUARD_HOLD_LENGTH) {
+				tapAmount++;
+				if (tapAmount >= G.STAB_TAP_AMOUNT) {
+					playerState = playerStates.STABBING;
+				}
 			}
-			tapAmount = 0;
+			pressedTime = 0;
 		}
+		if (input.isPressed) {
+			pressedTime += 1/60; // all inputs are measured in seconds
+			if (pressedTime >= G.GUARD_HOLD_LENGTH) {
+				playerState = playerStates.GUARDING;
+				tapAmount = 0;
+			}
+		} else {
+			releasedTime += 1/60;
+			if (releasedTime >= G.RESET_LENGTH) {
+				if (tapAmount >= G.STAB_TAP_AMOUNT) {
+					playerState = playerStates.DEFAULT;
+				} else if (tapAmount > 0) {
+					playerState = playerStates.SLASHING;
+				}
+				tapAmount = 0;
+			}
+		}
+	} else if (input.isJustReleased) {
+		firstClick = true;
 	}
+	
 
 	// player actions
 	switch (playerState) {
@@ -190,6 +202,7 @@ function update() {
 			console.log("guarding");
 			break;
 		case playerStates.SLASHING:
+			DamageAllEnemies(G.SLASH_DAMAGE);
 			console.log("slash");
 			playerState = playerStates.DEFAULT;
 			break;
@@ -216,7 +229,28 @@ function update() {
 
 	// health bars
 	healthBar.forEach(hb => {
+		color("red");
+		box(hb.pos.x, hb.pos.y+G.HEALTH_BAR_OFFSET, G.HEALTH_BAR_LENGTH, 1);
+		var hpLength = (hb.health / hb.maxHealth) * G.HEALTH_BAR_LENGTH;
+		if (hpLength < 0) {
+			hpLength = 0;
+		}
+		const hpX = hb.pos.x - (G.HEALTH_BAR_LENGTH / 2) + (hpLength / 2);
 		color("green");
-		box(hb.pos.x, hb.pos.y+G.HEALTH_BAR_OFFSET, 6, 1);
+		box(hpX, hb.pos.y+G.HEALTH_BAR_OFFSET, hpLength, 1);
+	});
+}
+
+function DamageEnemy(order, damage) {
+	const e = enemy[order];
+	const hb = healthBar[e.hBarIndex];
+	e.health -= damage;
+	clamp(e.health, 0, Infinity);
+	hb.health = e.health; 
+}
+
+function DamageAllEnemies(damage) {
+	enemy.forEach(e => {
+		DamageEnemy(e.order, damage);
 	});
 }
