@@ -24,11 +24,12 @@ l    l
 ];
 
 const G = {
-	WIDTH: 95,
-	HEIGHT: 70,
+	WIDTH: 115,
+	HEIGHT: 80,
 
 	PLAYER_HEALTH: 100,
-	ENEMY_0_HEALTH: 200,
+	ENEMY_0_HEALTH: 150,
+	ENEMY_0_SCORE_VALUE: 5,
 
 	GUARD_HOLD_LENGTH: 0.3,
 	RESET_LENGTH: 0.2,
@@ -81,6 +82,7 @@ let player;
  * order: number
  * hBarIndex: number
  * living: boolean
+ * scoreValue: number
  * }} Enemy
  */
 
@@ -163,7 +165,8 @@ function update() {
 				type: 0,
 				order: index,
 				hBarIndex: index + 1,
-				living: true
+				living: true,
+				scoreValue: G.ENEMY_0_SCORE_VALUE
 			});
 			livingEnemies.push(enemy[index]);
 			const interval = G.WIDTH / 4;
@@ -238,7 +241,6 @@ function update() {
 				if (livingEnemies[stabTarget] == null) {
 					stabTarget = rndi(0, livingEnemies.length);
 				}
-				console.log(stabTarget);
 				// insert stab effect here. position is at livingEnemies[stabTarget].pos
 				DamageEnemy(stabTarget, G.STAB_DAMAGE);
 				console.log("stab");
@@ -289,9 +291,11 @@ function DamageEnemy(order, damage) {
 		const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2))
 		e.health -= randDamage;
 		hb.health = e.health; 
+		//text(String(damage), hb.pos, {color: "cyan"});
 		if (e.health <= 0 && e.living == true) {
 			livingEnemies.splice(e.order, 1);
 			e.living = false;
+			addScore(e.scoreValue, hb.pos); 
 			enemyCount--;
 		}
 	}
