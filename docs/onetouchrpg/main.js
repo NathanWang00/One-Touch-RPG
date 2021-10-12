@@ -80,6 +80,7 @@ let player;
  * type: number
  * order: number
  * hBarIndex: number
+ * living: boolean
  * }} Enemy
  */
 
@@ -87,6 +88,16 @@ let player;
  * @type { Enemy [] }
  */
 let enemy;
+
+/**
+ * @type { Enemy [] }
+ */
+let livingEnemies;
+
+ /**
+ * @type { number }
+ */
+let enemyCount;
 
 /**
  * @typedef {{
@@ -144,14 +155,17 @@ function update() {
 		});
 
 		enemy = [];
+		livingEnemies = [];
 
 		for (let index = 0; index < 3; index++) {
 			enemy.push({
 				health: G.ENEMY_0_HEALTH,
 				type: 0,
 				order: index,
-				hBarIndex: index + 1
+				hBarIndex: index + 1,
+				living: true
 			});
+			livingEnemies.push(enemy[index]);
 			const interval = G.WIDTH / 4;
 			const position = (index * interval) + interval;
 			healthBar.push({
@@ -160,6 +174,7 @@ function update() {
 				pos: vec(position, G.HEIGHT/3)
 			});
 		}
+		enemyCount = 3;
 	}
 	if (firstClick) {
 		// input and state determination
@@ -174,7 +189,7 @@ function update() {
 				if (tapAmount >= G.STAB_TAP_AMOUNT) {
 					if (playerState != playerStates.STABBING) {
 						playerState = playerStates.STABBING;
-						stabTarget = rndi(0, enemy.length);
+						stabTarget = rndi(0, livingEnemies.length);
 					}
 				}
 			}
@@ -219,7 +234,7 @@ function update() {
 			if (lastStabTime <= 0) {
 				lastStabTime = G.STAB_DELAY;
 				if (enemy[stabTarget] == null) {
-					stabTarget = rndi(0, enemy.length);
+					stabTarget = rndi(0, livingEnemies.length);
 				}
 				console.log(stabTarget);
 				DamageEnemy(stabTarget, G.STAB_DAMAGE);
@@ -232,12 +247,19 @@ function update() {
 	color("black");
 	char("a", player.pos);
 
+	var i = 0;
 	// enemy sprites
 	enemy.forEach(e => {
-		color("black");
-		const interval = G.WIDTH / (enemy.length + 1);
-		const position = (e.order * interval) + interval;
-		char("b", vec(position, G.HEIGHT/3));
+		if (e.health > 0) {
+			const interval = G.WIDTH / (enemy.length + 1);
+			const position = (e.order * interval) + interval;
+			color("black");
+			char("b", vec(position, G.HEIGHT/3));
+			//ReorderEnemies();
+		} else {
+			
+		}
+		i++;
 	});
 
 	// health bars
@@ -245,6 +267,9 @@ function update() {
 		color("red");
 		box(hb.pos.x, hb.pos.y+G.HEALTH_BAR_OFFSET, G.HEALTH_BAR_LENGTH, 1);
 		var hpLength = (hb.health / hb.maxHealth) * G.HEALTH_BAR_LENGTH;
+		if (hpLength > 0 && hpLength < 1) {
+			hpLength = 1;
+		}
 		if (hpLength < 0) {
 			hpLength = 0;
 		}
@@ -255,12 +280,18 @@ function update() {
 }
 
 function DamageEnemy(order, damage) {
-	const e = enemy[order];
-	const hb = healthBar[e.hBarIndex];
-	const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2))
-	e.health -= randDamage;
-	clamp(e.health, 0, Infinity);
-	hb.health = e.health; 
+	const e = livingEnemies[order];
+	if (e != null) {
+		const hb = healthBar[e.hBarIndex];
+		const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2))
+		e.health -= randDamage;
+		hb.health = e.health; 
+		if (e.health <= 0 && e.living == true) {
+			livingEnemies.splice(e.order, 1);
+			e.living = false;
+			enemyCount--;
+		}
+	}
 }
 
 function DamageAllEnemies(damage) {
@@ -269,3 +300,15 @@ function DamageAllEnemies(damage) {
 	});
 }
 
+function ReorderEnemies() {
+	var index = 0;
+	enemy.forEach(e => {
+		e.order = index;
+		e.hBarIndex = index + 1;
+		var hb = healthBar[e.hBarIndex];
+		const interval = G.WIDTH / (enemy.length + 1);
+		const position = (index * interval) + interval;
+		hb.pos = vec(position, G.HEIGHT/3);
+		index++;
+	});
+}
