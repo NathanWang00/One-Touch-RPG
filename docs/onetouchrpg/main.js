@@ -31,17 +31,17 @@ const G = {
 	ENEMY_0_HEALTH: 200,
 
 	GUARD_HOLD_LENGTH: 0.3,
-	RESET_LENGTH: 0.15,
+	RESET_LENGTH: 0.2,
 
 	STAB_TAP_AMOUNT: 2,
 	STAB_DELAY: 0.1,
 	
 	STAB_DAMAGE: 10,
-	SLASH_DAMAGE: 25,
+	SLASH_DAMAGE: 12,
 
 	DAMAGE_VARIANCE: 0.05,
 
-	HEALTH_BAR_LENGTH: 6,
+	HEALTH_BAR_LENGTH: 8,
 	HEALTH_BAR_OFFSET: 5,
 }
 
@@ -95,7 +95,7 @@ let enemy;
  * pos: Vector
  * }} HealthBar
  */
- let healthBar;
+let healthBar;
 
 /**
  * @type { string }
@@ -105,22 +105,27 @@ let playerState = playerStates.DEFAULT;
 /**
  * @type { number }
  */
- let pressedTime = 0;
+let pressedTime = 0;
 
 /**
  * @type { number }
  */
- let releasedTime = 0;
+let releasedTime = 0;
 
  /**
  * @type { number }
  */
-  let lastStabTime = 0;
+let lastStabTime = 0;
 
  /**
  * @type { number }
  */
 let tapAmount = 0;
+
+ /**
+ * @type { number }
+ */
+  let stabTarget = 0;
 
 let firstClick = false;
 
@@ -167,7 +172,10 @@ function update() {
 			} else if (pressedTime < G.GUARD_HOLD_LENGTH) {
 				tapAmount++;
 				if (tapAmount >= G.STAB_TAP_AMOUNT) {
-					playerState = playerStates.STABBING;
+					if (playerState != playerStates.STABBING) {
+						playerState = playerStates.STABBING;
+						stabTarget = rndi(0, enemy.length);
+					}
 				}
 			}
 			pressedTime = 0;
@@ -210,6 +218,11 @@ function update() {
 			lastStabTime -= 1/60;
 			if (lastStabTime <= 0) {
 				lastStabTime = G.STAB_DELAY;
+				if (enemy[stabTarget] == null) {
+					stabTarget = rndi(0, enemy.length);
+				}
+				console.log(stabTarget);
+				DamageEnemy(stabTarget, G.STAB_DAMAGE);
 				console.log("stab");
 			}
 			break;
@@ -244,7 +257,8 @@ function update() {
 function DamageEnemy(order, damage) {
 	const e = enemy[order];
 	const hb = healthBar[e.hBarIndex];
-	e.health -= damage;
+	const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2))
+	e.health -= randDamage;
 	clamp(e.health, 0, Infinity);
 	hb.health = e.health; 
 }
@@ -254,3 +268,4 @@ function DamageAllEnemies(damage) {
 		DamageEnemy(e.order, damage);
 	});
 }
+
