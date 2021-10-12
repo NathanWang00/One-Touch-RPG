@@ -160,7 +160,7 @@ let slashY = G.HEIGHT / 3;
 let slashX = 10;
 let slashEffectTick = 0;
 let stabEffectTick = 0;
-let stabEffectPos;
+// let stabEffectPos;
 
 function update() {
 	if(slashEffectTick != 0) {
@@ -256,6 +256,7 @@ function update() {
 			break;
 		case playerStates.GUARDING:
 			// insert guard effect here. position is at player.pos
+			GuardingEffect();
 			play("lucky");
 			console.log("guarding");
 			break;
@@ -263,6 +264,7 @@ function update() {
 			// insert slash effect here. y position is at G.Height/3
 			slashEffectTick = 10;
 			SlashingEffect();
+			play("explosion");
 			DamageAllEnemies(G.SLASH_DAMAGE);
 			console.log("slash");
 			playerState = playerStates.DEFAULT;
@@ -275,7 +277,8 @@ function update() {
 					stabTarget = rndi(0, livingEnemies.length);
 				}
 				// insert stab effect here. position is at livingEnemies[stabTarget].pos
-				stabEffectTick = 2;
+				// stabEffectTick = 2;
+				play("hit");
 			    StabbingEffect(livingEnemies[stabTarget].pos);
 				DamageEnemy(stabTarget, G.STAB_DAMAGE);
 				console.log("stab");
@@ -323,8 +326,6 @@ function update() {
 function DamageEnemy(order, damage) {
 	const e = livingEnemies[order];
 	if (e != null) {
-		play("explosion");
-		play("hit");
 		const hb = healthBar[e.hBarIndex];
 		const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2))
 		e.health -= randDamage;
@@ -376,12 +377,18 @@ function StabbingEffect(pos) {
 	color("red");
 	particle(livingEnemies[stabTarget].pos);
 
-	stabEffectTick --;
+	// stabEffectTick --;
 	color("yellow");
 	rect(pos.x - 7, pos.y + 1, 13, 2);
 	color("red");
 	rect(pos.x - 3, pos.y - 1, 13, 2);
-	if(stabEffectTick == 0) {
-		stabEffectPos = null;
-	}
+	// if(stabEffectTick == 0) {
+	// 	stabEffectPos = null;
+	// }
+}
+
+function GuardingEffect() {
+	color("yellow");
+	arc(player.pos, 12, 3, 0, -3.1);
+	particle(player.pos);
 }
