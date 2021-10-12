@@ -222,9 +222,11 @@ function update() {
 		case playerStates.DEFAULT:
 			break;
 		case playerStates.GUARDING:
+			// insert guard effect here. position is at player.pos
 			console.log("guarding");
 			break;
 		case playerStates.SLASHING:
+			// insert slash effect here. y position is at G.Height/3
 			DamageAllEnemies(G.SLASH_DAMAGE);
 			console.log("slash");
 			playerState = playerStates.DEFAULT;
@@ -233,10 +235,11 @@ function update() {
 			lastStabTime -= 1/60;
 			if (lastStabTime <= 0) {
 				lastStabTime = G.STAB_DELAY;
-				if (enemy[stabTarget] == null) {
+				if (livingEnemies[stabTarget] == null) {
 					stabTarget = rndi(0, livingEnemies.length);
 				}
 				console.log(stabTarget);
+				// insert stab effect here. position is at livingEnemies[stabTarget].pos
 				DamageEnemy(stabTarget, G.STAB_DAMAGE);
 				console.log("stab");
 			}
