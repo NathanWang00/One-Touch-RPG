@@ -7,14 +7,26 @@ description =
 `;
 
 characters = [
-// Player (placeholder)
-`
+// Player 1 (placeholder)
+	`
+  ll  
+  Yl Y
+ YccY L
+Ycbbc
+c BB c
  l  l
-
-l    l
- llll
-`,
+	
+	`,
 // Enemy 1 (placeholder)
+`
+  ll 
+ lbbl
+lbpPbl
+ lbbl
+  ll
+lb  bl
+`,
+
 `
  l  l
 
@@ -49,10 +61,12 @@ const G = {
 options = {
 	viewSize: {x: G.WIDTH, y: G.HEIGHT},
 	isReplayEnabled: true,
+	isPlayingBgm: true,
 	theme: "simple",
 	isCapturing: true,
     isCapturingGameCanvasOnly: true,
-    captureCanvasScale: 2
+    captureCanvasScale: 2,
+	seed: 5
 };
 
 const playerStates = {
@@ -83,6 +97,7 @@ let player;
  * hBarIndex: number
  * living: boolean
  * scoreValue: number
+ * pos: Vector
  * }} Enemy
  */
 
@@ -141,8 +156,19 @@ let tapAmount = 0;
   let stabTarget = 0;
 
 let firstClick = false;
+let slashY = G.HEIGHT / 3;
+let slashX = 10;
+let slashEffectTick = 0;
+let stabEffectTick = 0;
+let stabEffectPos;
 
 function update() {
+	if(slashEffectTick != 0) {
+		SlashingEffect();
+	}
+	// if(stabEffectPos != null) {
+	// 	StabbingEffect(stabEffectPos);
+	// }
 	if (!ticks) {
 		player = {
 			health: G.PLAYER_HEALTH,
@@ -166,7 +192,8 @@ function update() {
 				order: index,
 				hBarIndex: index + 1,
 				living: true,
-				scoreValue: G.ENEMY_0_SCORE_VALUE
+				scoreValue: G.ENEMY_0_SCORE_VALUE,
+				pos: vec()
 			});
 			livingEnemies.push(enemy[index]);
 			const interval = G.WIDTH / 4;
@@ -179,6 +206,9 @@ function update() {
 		}
 		enemyCount = 3;
 	}
+
+	
+
 	if (firstClick) {
 		// input and state determination
 		if (input.isJustPressed) {
@@ -226,10 +256,13 @@ function update() {
 			break;
 		case playerStates.GUARDING:
 			// insert guard effect here. position is at player.pos
+			play("lucky");
 			console.log("guarding");
 			break;
 		case playerStates.SLASHING:
 			// insert slash effect here. y position is at G.Height/3
+			slashEffectTick = 10;
+			SlashingEffect();
 			DamageAllEnemies(G.SLASH_DAMAGE);
 			console.log("slash");
 			playerState = playerStates.DEFAULT;
@@ -242,6 +275,8 @@ function update() {
 					stabTarget = rndi(0, livingEnemies.length);
 				}
 				// insert stab effect here. position is at livingEnemies[stabTarget].pos
+				stabEffectTick = 2;
+			    StabbingEffect(livingEnemies[stabTarget].pos);
 				DamageEnemy(stabTarget, G.STAB_DAMAGE);
 				console.log("stab");
 			}
@@ -260,6 +295,7 @@ function update() {
 			const position = (e.order * interval) + interval;
 			color("black");
 			char("b", vec(position, G.HEIGHT/3));
+			e.pos = vec(position, G.HEIGHT/3)
 			//ReorderEnemies();
 		} else {
 			
@@ -287,12 +323,15 @@ function update() {
 function DamageEnemy(order, damage) {
 	const e = livingEnemies[order];
 	if (e != null) {
+		play("explosion");
+		play("hit");
 		const hb = healthBar[e.hBarIndex];
 		const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2))
 		e.health -= randDamage;
 		hb.health = e.health; 
 		//text(String(damage), hb.pos, {color: "cyan"});
 		if (e.health <= 0 && e.living == true) {
+			play("coin");
 			livingEnemies.splice(e.order, 1);
 			e.living = false;
 			addScore(e.scoreValue, hb.pos); 
@@ -318,4 +357,31 @@ function ReorderEnemies() {
 		hb.pos = vec(position, G.HEIGHT/3);
 		index++;
 	});
+}
+
+function SlashingEffect() {
+	slashEffectTick--;
+	color("yellow");
+	rect(vec(slashX - 10, slashY + 1), slashX, 1);
+	color("light_cyan");
+	rect(slashX - 25, slashY - 2, slashX, 1);
+	slashX += 9;
+	if(slashEffectTick == 0) {
+		slashX = 10;
+	}
+}
+
+function StabbingEffect(pos) {
+	// stabEffectPos = pos;
+	color("red");
+	particle(livingEnemies[stabTarget].pos);
+
+	stabEffectTick --;
+	color("yellow");
+	rect(pos.x - 7, pos.y + 1, 13, 2);
+	color("red");
+	rect(pos.x - 3, pos.y - 1, 13, 2);
+	if(stabEffectTick == 0) {
+		stabEffectPos = null;
+	}
 }
