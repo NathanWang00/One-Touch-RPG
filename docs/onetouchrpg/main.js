@@ -58,11 +58,13 @@ const G = {
 	SLASH_RESET: 0.3,
 	SLASH_DAMAGE: 12,
 
-	DAMAGE_VARIANCE: 0.05,
+	DAMAGE_VARIANCE: 0.2,
 	DAMAGE_NUMBER_OFFSET: 5,
 
 	HEALTH_BAR_LENGTH: 8,
 	HEALTH_BAR_OFFSET: 5,
+
+	TEXT_TIME: 0.7,
 }
 
 options = {
@@ -118,9 +120,10 @@ let enemy;
 
 /**
  * @typedef {{
- * text: string
+ * dmg: string
  * pos: Vector
  * activeTime: number
+ * color: Color
  * }} HitText
  */
 
@@ -240,6 +243,8 @@ function update() {
 				pos: vec(position, G.HEIGHT/3)
 			});
 		}
+
+		hitText = [];
 		enemyCount = 3;
 	}
 
@@ -354,6 +359,13 @@ function update() {
 						DamagePlayer(e.atkDamage);
 					} else {
 						// insert enemy attack blocked effect (if you want)
+						const hb = healthBar[0];
+						hitText.push({
+							dmg: "BLOCKED",
+							pos: vec(hb.pos.x - 18, hb.pos.y - G.DAMAGE_NUMBER_OFFSET - 3),
+							activeTime: 0,
+							color: "yellow"
+						});
 					}
 					
 				}
@@ -385,16 +397,31 @@ function update() {
 		color("green");
 		box(hpX, hb.pos.y+G.HEALTH_BAR_OFFSET, hpLength, 1);
 	});
+
+	color("red");
+	remove(hitText, (ht) => {
+		ht.activeTime += 1/60;
+		ht.pos.y -= clamp(0.4 - (ht.activeTime / 3), 0, Infinity);
+		text(ht.dmg, ht.pos, {color: ht.color});
+		if (ht.activeTime >= G.TEXT_TIME) {
+			return true;
+		}
+	});
 }
 
 function DamageEnemy(order, damage) {
 	const e = livingEnemies[order];
 	if (e != null) {
 		const hb = healthBar[e.hBarIndex];
-		const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2));
+		const randDamage = round(rnd(damage - (damage * G.DAMAGE_VARIANCE / 2), damage + (damage * G.DAMAGE_VARIANCE / 2)));
 		e.health -= randDamage;
 		hb.health = e.health; 
-		//text(String(damage), hb.pos.x - 4, hb.pos.y - G.DAMAGE_NUMBER_OFFSET, {color: "red"});
+		hitText.push({
+			dmg: String(randDamage),
+			pos: vec(hb.pos.x - 4, hb.pos.y - G.DAMAGE_NUMBER_OFFSET),
+			activeTime: 0,
+			color: "red"
+		});
 		if (e.health <= 0 && e.living == true) {
 			play("coin");
 			if (livingEnemies.length > 1) {
@@ -418,9 +445,15 @@ function DamageAllEnemies(damage) {
 
 function DamagePlayer(damage) {
 	const hb = healthBar[0];
-	const randDamgae = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2));
+	const randDamgae = round(rnd(damage - (damage * G.DAMAGE_VARIANCE / 2), damage + (damage * G.DAMAGE_VARIANCE / 2)));
 	player.health -= randDamgae;
 	hb.health = player.health;
+	hitText.push({
+		dmg: String(randDamgae),
+		pos: vec(hb.pos.x - 4, hb.pos.y - G.DAMAGE_NUMBER_OFFSET),
+		activeTime: 0,
+		color: "red"
+	});
 	if (player.health <= 0) {
 		end();
 	}
