@@ -43,7 +43,8 @@ const G = {
 	ENEMY_0_HEALTH: 150,
 	ENEMY_0_SCORE_VALUE: 5,
 	ENEMY_0_ATTACK: 30,
-	EMEMY_0_ATTACK_DELAY: 160,
+	EMEMY_0_INITIAL_DELAY: 60,
+	EMEMY_0_ATTACK_DELAY: 240,
 	EMEMY_0_HIT_DELAY: 50,
 	ENEMY_0_ATTACK_VARIANCE: 80,
 
@@ -421,7 +422,7 @@ function DamagePlayer(damage) {
 	player.health -= randDamgae;
 	hb.health = player.health;
 	if (player.health <= 0) {
-		end;
+		end();
 	}
 }
 
