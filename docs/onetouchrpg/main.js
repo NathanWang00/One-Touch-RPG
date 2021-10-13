@@ -42,6 +42,8 @@ const G = {
 	PLAYER_HEALTH: 100,
 	ENEMY_0_HEALTH: 150,
 	ENEMY_0_SCORE_VALUE: 5,
+	ENEMY_0_ATTACK: 30,
+	EMEMY_0_ATTACK_DELAY: 50,
 
 	GUARD_HOLD_LENGTH: 0.3,
 	RESET_LENGTH: 0.2,
@@ -255,13 +257,11 @@ function update() {
 		case playerStates.DEFAULT:
 			break;
 		case playerStates.GUARDING:
-			// insert guard effect here. position is at player.pos
 			GuardingEffect();
 			play("lucky");
 			console.log("guarding");
 			break;
 		case playerStates.SLASHING:
-			// insert slash effect here. y position is at G.Height/3
 			slashEffectTick = 10;
 			SlashingEffect();
 			play("explosion");
@@ -275,13 +275,14 @@ function update() {
 				lastStabTime = G.STAB_DELAY;
 				if (livingEnemies[stabTarget] == null) {
 					stabTarget = rndi(0, livingEnemies.length);
+				} else {
+					play("hit");
+					StabbingEffect(livingEnemies[stabTarget].pos);
+					DamageEnemy(stabTarget, G.STAB_DAMAGE);
+					console.log("stab");
+					console.log(livingEnemies);
 				}
-				// insert stab effect here. position is at livingEnemies[stabTarget].pos
 				// stabEffectTick = 2;
-				play("hit");
-			    StabbingEffect(livingEnemies[stabTarget].pos);
-				DamageEnemy(stabTarget, G.STAB_DAMAGE);
-				console.log("stab");
 			}
 			break;
 	}
@@ -330,10 +331,15 @@ function DamageEnemy(order, damage) {
 		const randDamage = rnd(damage - (G.DAMAGE_VARIANCE / 2), damage + (G.DAMAGE_VARIANCE / 2))
 		e.health -= randDamage;
 		hb.health = e.health; 
-		//text(String(damage), hb.pos, {color: "cyan"});
+		text(String(damage), hb.pos, {color: "red"});
 		if (e.health <= 0 && e.living == true) {
 			play("coin");
-			livingEnemies.splice(e.order, 1);
+			if (livingEnemies.length > 1) {
+				livingEnemies.splice(order, 1);
+			} else {
+				livingEnemies.pop();
+			}
+			
 			e.living = false;
 			addScore(e.scoreValue, hb.pos); 
 			enemyCount--;
