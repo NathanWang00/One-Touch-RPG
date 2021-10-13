@@ -71,7 +71,7 @@ options = {
 	viewSize: {x: G.WIDTH, y: G.HEIGHT},
 	isReplayEnabled: true,
 	isPlayingBgm: true,
-	theme: "simple",
+	theme: "dark",
 	isCapturing: true,
     isCapturingGameCanvasOnly: true,
     captureCanvasScale: 2,
@@ -84,6 +84,18 @@ const playerStates = {
 	SLASHING: "slashing",
 	STABBING: "stabbing"
 }
+
+/**
+* @typedef {{
+* pos: Vector,
+* speed: number
+* }} Star
+*/
+	
+/**
+* @type  { Star [] }
+*/
+let stars;
 
 /**
  * @typedef {{
@@ -191,20 +203,43 @@ let slashReady = true;
  */
 let slashResetTime = 0;
 
+/**
+ * @typedef {{
+ * pos: Vector
+ * tick: number
+ * }} AttackWarnings
+ */
+
+/**
+ * @type { AttackWarnings [] }
+ */
+let attackWarningTicks;
+
 let firstClick = false;
 let slashY = G.HEIGHT / 3;
 let slashX = 10;
+let hitX = G.WIDTH/2;
+let hitX_1 = G.WIDTH/2;
+let hitY = G.HEIGHT*2/3;
 let slashEffectTick = 0;
-let stabEffectTick = 0;
-// let stabEffectPos;
+let attackBlockedTick = 20;
+let hitEffectTick = 0;
+let attackWarningTickLength = 0;
 
 function update() {
 	if(slashEffectTick != 0) {
 		SlashingEffect();
 	}
-	// if(stabEffectPos != null) {
-	// 	StabbingEffect(stabEffectPos);
-	// }
+	if(hitEffectTick != 0) {
+		PlayerHitEffect();
+	}
+	if(attackBlockedTick != 20) {
+		AttackBlockedEffect();
+	}
+	if(attackWarningTickLength != 0) {
+		AttackWarningEffect(attackWarningTicks);
+	}
+
 	if (!ticks) {
 		player = {
 			health: G.PLAYER_HEALTH,
@@ -243,13 +278,28 @@ function update() {
 				pos: vec(position, G.HEIGHT/3)
 			});
 		}
+		attackWarningTicks = []
+		stars = times(20, () => {
+			const posX = rnd(0, G.WIDTH);
+			const posY = rnd(0, G.HEIGHT);
+			return {
+				pos: vec(posX, posY),
+				speed: rnd(0.5, 1.0)
+			};
+		});
 
 		hitText = [];
 		enemyCount = 3;
+		
 	}
 
+	stars.forEach((s) => {
+		s.pos.x -= s.speed;
+		s.pos.wrap(0, G.WIDTH, 0, G.HEIGHT);
+		color("light_black");
+		box(s.pos, 1);
+	});
 	
-
 	if (firstClick) {
 		// input and state determination
 		
@@ -348,6 +398,13 @@ function update() {
 			if (e.atkDelay <= 0) {
 				e.hitDelay--;
 				// insert enemy getting ready to attack (changed color for debugging)
+				play("select");
+				if (e.hitDelay == G.EMEMY_0_HIT_DELAY - 1) {
+					attackWarningTicks.push({pos: e.pos, tick: e.hitDelay});
+					attackWarningTickLength++;
+				}
+				
+				AttackWarningEffect(attackWarningTicks);
 				color("light_red");
 
 				if (e.hitDelay <= 0) {
@@ -356,15 +413,21 @@ function update() {
 					e.hitDelay = G.EMEMY_0_HIT_DELAY;
 					if (playerState != playerStates.GUARDING) {
 						// insert player hit effect
+						hitEffectTick = 15;
+						play("powerUp");
+						PlayerHitEffect();
 						DamagePlayer(e.atkDamage);
 					} else {
 						// insert enemy attack blocked effect (if you want)
+						play("jump");
+						attackBlockedTick = 0;
+						AttackBlockedEffect();
 						const hb = healthBar[0];
 						hitText.push({
 							dmg: "BLOCKED",
 							pos: vec(hb.pos.x - 18, hb.pos.y - G.DAMAGE_NUMBER_OFFSET - 3),
 							activeTime: 0,
-							color: "yellow"
+							color: "light_yellow"
 						});
 					}
 					
@@ -485,22 +548,53 @@ function SlashingEffect() {
 }
 
 function StabbingEffect(pos) {
-	// stabEffectPos = pos;
 	color("red");
 	particle(livingEnemies[stabTarget].pos);
 
-	// stabEffectTick --;
 	color("yellow");
 	rect(pos.x - 7, pos.y + 1, 13, 2);
 	color("red");
 	rect(pos.x - 3, pos.y - 1, 13, 2);
-	// if(stabEffectTick == 0) {
-	// 	stabEffectPos = null;
-	// }
 }
 
 function GuardingEffect() {
 	color("yellow");
-	arc(player.pos, 12, 3, 0, -3.1);
-	particle(player.pos);
+	arc(player.pos, 12, 2, 0, -3.1);
+	particle(player.pos, 1);
+}
+
+function AttackWarningEffect(AttackWarnings) {
+	remove(AttackWarnings, (aw) => {
+		color("purple");
+		arc(aw.pos, 0.5 * aw.tick, 1, 0, ticks * 0.1 + PI * 2);
+		aw.tick--;
+		if(aw.tick == 0) {
+			attackWarningTickLength--;
+			return true;
+		}
+	});
+}
+
+function PlayerHitEffect() {
+	hitEffectTick--;
+	color("red");
+	particle(player.pos.x, player.pos.y + 2, 4, 1, -PI/2, PI/4);
+	color("red");
+	rect(vec(hitX - 10, hitY - 2), 3, 2);
+	hitX+=3;
+	color("light_red");
+	rect(vec(hitX_1 + 10, hitY + 2), 3, 2);
+	hitX_1-=3;
+
+	if(hitEffectTick == 0) {
+		hitX = player.pos.x;
+		hitX_1 = player.pos.x;
+	}
+}
+
+function AttackBlockedEffect() {    
+	attackBlockedTick++;
+	color("light_yellow");
+	arc(player.pos, 1.9 * attackBlockedTick, 1, 0, attackBlockedTick * 0.5 + PI * 2);
+	particle(player.pos, 1, 4);
 }
