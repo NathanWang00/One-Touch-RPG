@@ -343,17 +343,17 @@ function update() {
 			if (e.atkDelay <= 0) {
 				e.hitDelay--;
 				// insert enemy getting ready to attack (changed color for debugging)
-				color("red");
+				color("light_red");
 
 				if (e.hitDelay <= 0) {
 					// insert enemy attacking
 					e.atkDelay = G.EMEMY_0_ATTACK_DELAY;
 					e.hitDelay = G.EMEMY_0_HIT_DELAY;
 					if (playerState != playerStates.GUARDING) {
-						// insert player damage
+						// insert player hit effect
 						DamagePlayer(e.atkDamage);
 					} else {
-						// insert enemy attack blocked (if you want)
+						// insert enemy attack blocked effect (if you want)
 					}
 					
 				}
