@@ -28,10 +28,9 @@ lb  bl
 `,
 
 `
- l  l
-
- llll
-l    l
+ l
+lll
+ l
 `
 ];
 
@@ -44,19 +43,22 @@ const G = {
 	ENEMY_0_SCORE_VALUE: 5,
 	ENEMY_0_ATTACK: 30,
 	EMEMY_0_INITIAL_DELAY: 60,
-	EMEMY_0_ATTACK_DELAY: 240,
+	EMEMY_0_ATTACK_DELAY: 200,
 	EMEMY_0_HIT_DELAY: 50,
 	ENEMY_0_ATTACK_VARIANCE: 80,
+
+	RESPAWN_TIME: 20,
+	MAX_DIFFICULTY: 10,
 
 	GUARD_HOLD_LENGTH: 0.2,
 	RESET_LENGTH: 0.11,
 
 	STAB_TAP_AMOUNT: 2,
 	STAB_DELAY: 0.1,
-	STAB_DAMAGE: 10,
+	STAB_DAMAGE: 8,
 
 	SLASH_RESET: 0.3,
-	SLASH_DAMAGE: 12,
+	SLASH_DAMAGE: 14,
 
 	DAMAGE_VARIANCE: 0.2,
 	DAMAGE_NUMBER_OFFSET: 5,
@@ -153,6 +155,16 @@ let livingEnemies;
  * @type { number }
  */
 let enemyCount;
+
+ /**
+ * @type { number }
+ */
+let respawnTime = G.RESPAWN_TIME;
+
+ /**
+ * @type { number }
+ */
+let waveCount = 0;
 
 /**
  * @typedef {{
@@ -256,9 +268,9 @@ function update() {
 		enemy = [];
 		livingEnemies = [];
 
-		for (let index = 0; index < 3; index++) {
+		for (let index = 0; index < 1; index++) {
 			enemy.push({
-				health: G.ENEMY_0_HEALTH,
+				health: G.ENEMY_0_HEALTH * 2,
 				type: 0,
 				order: index,
 				hBarIndex: index + 1,
@@ -266,15 +278,15 @@ function update() {
 				scoreValue: G.ENEMY_0_SCORE_VALUE,
 				pos: vec(),
 				atkDamage: G.ENEMY_0_ATTACK,
-				atkDelay: G.EMEMY_0_ATTACK_DELAY + (index * G.ENEMY_0_ATTACK_VARIANCE),
+				atkDelay: G.EMEMY_0_ATTACK_DELAY /2,
 				hitDelay: G.EMEMY_0_HIT_DELAY
 			});
 			livingEnemies.push(enemy[index]);
-			const interval = G.WIDTH / 4;
+			const interval = G.WIDTH / 2;
 			const position = (index * interval) + interval;
 			healthBar.push({
-				maxHealth: G.ENEMY_0_HEALTH,
-				health: G.ENEMY_0_HEALTH,
+				maxHealth: G.ENEMY_0_HEALTH * 2,
+				health: G.ENEMY_0_HEALTH * 2,
 				pos: vec(position, G.HEIGHT/3)
 			});
 		}
@@ -290,7 +302,7 @@ function update() {
 
 		hitText = [];
 		enemyCount = 3;
-		
+		waveCount = 0;
 	}
 
 	stars.forEach((s) => {
@@ -302,12 +314,16 @@ function update() {
 	
 	if (firstClick) {
 		// input and state determination
-		
-		if (slashResetTime > 0 && slashReady == false) {
-			slashResetTime -= 1/60;
-		} else {
-			slashResetTime = G.SLASH_RESET;
-			slashReady = true;
+		if (!slashReady) {
+			if (slashResetTime > 0) {
+				slashResetTime -= 1/60;
+			} else {
+				slashResetTime = G.SLASH_RESET;
+				slashReady = true;
+				color("black");
+				var effectPos = vec(player.pos.x + 5, player.pos.y - 5);
+				char("c", effectPos);
+			}
 		}
 		if (input.isJustPressed) {
 			releasedTime = 0;
@@ -389,6 +405,58 @@ function update() {
 	// player sprite
 	color("black");
 	char("a", player.pos);
+
+	if (livingEnemies.length == 0) {
+		respawnTime--;
+		if (respawnTime <= 0) {
+			respawnTime = G.RESPAWN_TIME;
+			healthBar = [];
+			healthBar.push({
+				maxHealth: G.PLAYER_HEALTH,
+				health: player.health,
+				pos: player.pos
+			});
+			enemy = [];
+			const enemyAmount = rndi(0, 4);
+			var tempHealth = G.ENEMY_0_HEALTH;
+			var atkDelay = G.EMEMY_0_ATTACK_DELAY - (waveCount * 10);
+			var atkDamage = G.ENEMY_0_ATTACK + (waveCount * 3);
+			var hitDelay = G.EMEMY_0_HIT_DELAY - waveCount;
+			var variance = G.ENEMY_0_ATTACK_VARIANCE - (waveCount * 2);
+			if (enemyAmount == 2) {
+				tempHealth *= 1.5;
+				atkDelay = atkDelay / 1.5;
+			} else if (enemyAmount == 1) {
+				tempHealth *= 2;
+				atkDelay = atkDelay / 2;
+			}
+			for (let index = 0; index < enemyAmount; index++) {
+				enemy.push({
+					health: tempHealth,
+					type: 0,
+					order: index,
+					hBarIndex: index + 1,
+					living: true,
+					scoreValue: G.ENEMY_0_SCORE_VALUE,
+					pos: vec(),
+					atkDamage: atkDamage,
+					atkDelay: atkDelay + (index * variance),
+					hitDelay: hitDelay
+				});
+				livingEnemies.push(enemy[index]);
+				const interval = G.WIDTH / (enemyAmount + 1);
+				const position = (index * interval) + interval;
+				healthBar.push({
+					maxHealth: tempHealth,
+					health: tempHealth,
+					pos: vec(position, G.HEIGHT/3)
+				});
+			}
+			if (waveCount < G.MAX_DIFFICULTY) {
+				waveCount++;
+			}
+		}
+	}
 
 	var i = 0;
 	// enemy sprites
@@ -479,9 +547,15 @@ function DamageEnemy(order, damage) {
 		const randDamage = round(rnd(damage - (damage * G.DAMAGE_VARIANCE / 2), damage + (damage * G.DAMAGE_VARIANCE / 2)));
 		e.health -= randDamage;
 		hb.health = e.health; 
+		var xPos;
+		if (randDamage < 10) {
+			xPos = hb.pos.x;
+		} else {
+			xPos = hb.pos.x - 4;
+		}
 		hitText.push({
 			dmg: String(randDamage),
-			pos: vec(hb.pos.x - 4, hb.pos.y - G.DAMAGE_NUMBER_OFFSET),
+			pos: vec(xPos, hb.pos.y - G.DAMAGE_NUMBER_OFFSET),
 			activeTime: 0,
 			color: "red"
 		});
@@ -491,10 +565,11 @@ function DamageEnemy(order, damage) {
 				livingEnemies.splice(order, 1);
 			} else {
 				livingEnemies.pop();
+				var bonusScore = 10 * (1 + (waveCount / 10));
+				addScore(bonusScore, player.pos);
 			}
 			
 			e.living = false;
-			addScore(e.scoreValue, hb.pos); 
 			enemyCount--;
 		}
 	}
@@ -511,9 +586,15 @@ function DamagePlayer(damage) {
 	const randDamgae = round(rnd(damage - (damage * G.DAMAGE_VARIANCE / 2), damage + (damage * G.DAMAGE_VARIANCE / 2)));
 	player.health -= randDamgae;
 	hb.health = player.health;
+	var xPos;
+	if (randDamgae < 10) {
+		xPos = hb.pos.x;
+	} else {
+		xPos = hb.pos.x - 4;
+	}
 	hitText.push({
 		dmg: String(randDamgae),
-		pos: vec(hb.pos.x - 4, hb.pos.y - G.DAMAGE_NUMBER_OFFSET),
+		pos: vec(xPos, hb.pos.y - G.DAMAGE_NUMBER_OFFSET),
 		activeTime: 0,
 		color: "red"
 	});
